@@ -15,26 +15,6 @@
  */
 package annis.libgui;
 
-import annis.VersionInfo;
-import annis.libgui.media.MediaController;
-import annis.libgui.visualizers.VisualizerPlugin;
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.joran.JoranConfigurator;
-import ch.qos.logback.core.joran.spi.JoranException;
-import com.google.common.base.Charsets;
-import com.google.common.eventbus.EventBus;
-import com.google.common.hash.Hashing;
-import com.google.common.io.Files;
-import com.vaadin.annotations.Theme;
-import com.vaadin.sass.internal.ScssStylesheet;
-import com.vaadin.server.ClassResource;
-import com.vaadin.server.Page;
-import com.vaadin.server.RequestHandler;
-import com.vaadin.server.VaadinRequest;
-import com.vaadin.server.VaadinResponse;
-import com.vaadin.server.VaadinService;
-import com.vaadin.server.VaadinSession;
-import com.vaadin.ui.UI;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -49,13 +29,9 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import net.xeoh.plugins.base.Plugin;
-import net.xeoh.plugins.base.PluginManager;
-import net.xeoh.plugins.base.impl.PluginManagerFactory;
-import net.xeoh.plugins.base.util.PluginManagerUtil;
+
 import org.apache.commons.io.filefilter.SuffixFileFilter;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.map.AnnotationIntrospector;
@@ -65,6 +41,31 @@ import org.codehaus.jackson.map.SerializationConfig;
 import org.codehaus.jackson.xc.JaxbAnnotationIntrospector;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
+
+import com.google.common.base.Charsets;
+import com.google.common.eventbus.EventBus;
+import com.google.common.hash.Hashing;
+import com.google.common.io.Files;
+import com.vaadin.annotations.Theme;
+import com.vaadin.sass.internal.ScssStylesheet;
+import com.vaadin.server.ClassResource;
+import com.vaadin.server.Page;
+import com.vaadin.server.RequestHandler;
+import com.vaadin.server.VaadinRequest;
+import com.vaadin.server.VaadinResponse;
+import com.vaadin.server.VaadinService;
+import com.vaadin.server.VaadinSession;
+import com.vaadin.ui.UI;
+
+import annis.VersionInfo;
+import annis.libgui.visualizers.VisualizerPlugin;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
+import net.xeoh.plugins.base.Plugin;
+import net.xeoh.plugins.base.PluginManager;
+import net.xeoh.plugins.base.impl.PluginManagerFactory;
+import net.xeoh.plugins.base.util.PluginManagerUtil;
 /**
  * Basic UI functionality.
  * 
@@ -98,8 +99,6 @@ public class AnnisBaseUI extends UI implements PluginSystem, Serializable
 
   private static final Map<String, Date> resourceAddedDate =
     Collections.synchronizedMap(new HashMap<String, Date>());
-
-  private transient MediaController mediaController;
 
   private transient ObjectMapper jsonMapper;
   
@@ -483,6 +482,6 @@ public class AnnisBaseUI extends UI implements PluginSystem, Serializable
     }
     return loginDataLostBus;
   }
-  
+ 
   
 }

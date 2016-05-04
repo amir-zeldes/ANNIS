@@ -18,35 +18,7 @@ package annis.libgui;
 import static annis.model.AnnisConstants.ANNIS_NS;
 import static annis.model.AnnisConstants.FEAT_MATCHEDNODE;
 import static annis.model.AnnisConstants.FEAT_RELANNIS_NODE;
-import annis.model.Annotation;
-import annis.model.RelannisNodeFeature;
-import annis.provider.SaltProjectProvider;
-import annis.service.objects.CorpusConfig;
-import annis.service.objects.CorpusConfigMap;
-import annis.service.objects.DocumentBrowserConfig;
-import annis.service.objects.OrderType;
-import annis.service.objects.RawTextWrapper;
-import com.google.common.base.Joiner;
-import com.google.common.escape.Escaper;
-import com.google.common.escape.Escapers;
-import com.google.common.net.UrlEscapers;
-import com.sun.jersey.api.client.AsyncWebResource;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.GenericType;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.client.apache4.ApacheHttpClient4;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import com.sun.jersey.client.apache4.config.DefaultApacheHttpClient4Config;
-import com.vaadin.server.JsonCodec;
-import com.vaadin.server.Page;
-import com.vaadin.server.VaadinService;
-import com.vaadin.server.VaadinSession;
-import com.vaadin.server.WrappedSession;
-import com.vaadin.ui.Notification;
-import com.vaadin.ui.UI;
-import elemental.json.JsonValue;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -61,7 +33,9 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
+
 import javax.ws.rs.core.UriBuilder;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.auth.AuthScope;
@@ -82,6 +56,37 @@ import org.corpus_tools.salt.core.SNode;
 import org.corpus_tools.salt.core.SRelation;
 import org.eclipse.emf.common.util.BasicEList;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Joiner;
+import com.google.common.escape.Escaper;
+import com.google.common.escape.Escapers;
+import com.google.common.net.UrlEscapers;
+import com.sun.jersey.api.client.AsyncWebResource;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.GenericType;
+import com.sun.jersey.api.client.UniformInterfaceException;
+import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.client.apache4.ApacheHttpClient4;
+import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+import com.sun.jersey.client.apache4.config.DefaultApacheHttpClient4Config;
+import com.vaadin.server.JsonCodec;
+import com.vaadin.server.Page;
+import com.vaadin.server.VaadinService;
+import com.vaadin.server.VaadinSession;
+import com.vaadin.server.WrappedSession;
+import com.vaadin.ui.Notification;
+import com.vaadin.ui.UI;
+
+import annis.model.Annotation;
+import annis.model.RelannisNodeFeature;
+import annis.provider.SaltProjectProvider;
+import annis.service.objects.CorpusConfig;
+import annis.service.objects.CorpusConfigMap;
+import annis.service.objects.DocumentBrowserConfig;
+import annis.service.objects.OrderType;
+import annis.service.objects.RawTextWrapper;
+import elemental.json.JsonValue;
 
 /**
  *
@@ -1090,7 +1095,7 @@ public class Helper
     {
       this.matchedAndCovered = initialMatches;
 
-      Map<SNode, Long> sortedByOverlappedTokenIntervall = new TreeMap<>(
+      Map<SNode, Long> sortedMatchedNodes = new TreeMap<>(
         new Comparator<SNode>()
         {
           @Override
@@ -1131,13 +1136,13 @@ public class Helper
       for (Map.Entry<String, Long> entry : initialMatches.entrySet())
       {
         SNode n = graph.getNode(entry.getKey());
-        sortedByOverlappedTokenIntervall.put(n, entry.getValue());
+        sortedMatchedNodes.put(n, entry.getValue());
       }
 
       currentMatchPos = 1;
       if (initialMatches.size() > 0)
       {
-        graph.traverse(new BasicEList<>(sortedByOverlappedTokenIntervall.
+        graph.traverse(new BasicEList<>(sortedMatchedNodes.
           keySet()),
           GRAPH_TRAVERSE_TYPE.TOP_DOWN_DEPTH_FIRST, "CoveredMatchesCalculator",
           (GraphTraverseHandler) this, true);
@@ -1151,11 +1156,16 @@ public class Helper
     {
       if (fromNode != null
         && matchedAndCovered.containsKey(fromNode.getId())
-        && currNode != null
-        && !matchedAndCovered.containsKey(currNode.getId()))
+        && currNode != null)
       {
         currentMatchPos = matchedAndCovered.get(fromNode.getId());
-        matchedAndCovered.put(currNode.getId(), currentMatchPos);
+        
+        // only update the map when there is no entry yet or if the new index/position is smaller
+        Long oldMatchPos = matchedAndCovered.get(currNode.getId());
+        if(oldMatchPos == null || currentMatchPos < oldMatchPos)
+        {          
+          matchedAndCovered.put(currNode.getId(), currentMatchPos);
+        }
       }
 
     }

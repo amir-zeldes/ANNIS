@@ -15,31 +15,21 @@
  */
 package annis.utils;
 
-import annis.CommonHelper;
 import static annis.model.AnnisConstants.ANNIS_NS;
 import static annis.model.AnnisConstants.FEAT_MATCHEDIDS;
 import static annis.model.AnnisConstants.FEAT_RELANNIS_NODE;
-import annis.model.AnnisNode;
-import annis.model.Annotation;
-import annis.model.AnnotationGraph;
-import annis.model.Edge;
-import annis.model.Edge.EdgeType;
-import annis.model.RelannisEdgeFeature;
-import annis.model.RelannisNodeFeature;
-import annis.service.ifaces.AnnisResultSet;
-import annis.service.objects.AnnisResultImpl;
-import annis.service.objects.AnnisResultSetImpl;
-import annis.service.objects.Match;
-import com.google.common.base.Preconditions;
+
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.corpus_tools.salt.SaltFactory;
+
+import org.corpus_tools.salt.SALT_TYPE;
 import org.corpus_tools.salt.common.SCorpusGraph;
 import org.corpus_tools.salt.common.SDocument;
 import org.corpus_tools.salt.common.SDocumentGraph;
@@ -55,10 +45,24 @@ import org.corpus_tools.salt.core.SLayer;
 import org.corpus_tools.salt.core.SNode;
 import org.corpus_tools.salt.core.SRelation;
 import org.corpus_tools.salt.util.DataSourceSequence;
-import org.corpus_tools.salt.SALT_TYPE;
 import org.corpus_tools.salt.util.SaltUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+
+import annis.CommonHelper;
+import annis.model.AnnisNode;
+import annis.model.Annotation;
+import annis.model.AnnotationGraph;
+import annis.model.Edge;
+import annis.model.Edge.EdgeType;
+import annis.model.RelannisEdgeFeature;
+import annis.model.RelannisNodeFeature;
+import annis.service.ifaces.AnnisResultSet;
+import annis.service.objects.AnnisResultImpl;
+import annis.service.objects.AnnisResultSetImpl;
+import annis.service.objects.Match;
 
 /**
  * This class can convert the current Salt graph model into the legacy model 
@@ -244,7 +248,8 @@ public class LegacyGraphConverter
       RelannisEdgeFeature featRelation = RelannisEdgeFeature.extract(rel);
       if (featRelation != null)
       {
-        addRelation(rel, featRelation.getPre(), featRelation.getComponentID(),
+        addRelation(rel, 
+          featRelation.getPre(), featRelation.getComponentID(),
           allNodes, annoGraph);
       }
     }
@@ -258,19 +263,11 @@ public class LegacyGraphConverter
         && featEdge.getArtificialDominanceComponent() != null 
         && featEdge.getArtificialDominancePre() != null)
       {
-        SDominanceRelation newRel = SaltFactory.createSDominanceRelation();
-        newRel.setSource(rel.getSource());
-        newRel.setTarget(rel.getTarget());
-        for(SLayer layer : rel.getLayers())
-        {
-          layer.addRelation(newRel);
-        }
-        for(SAnnotation anno : rel.getAnnotations())
-        {
-          newRel.addAnnotation(anno);
-        }
         
-        addRelation(newRel, featEdge.getArtificialDominancePre(), 
+        addRelation(SDominanceRelation.class,
+          null, rel.getAnnotations(),
+          rel.getSource(), rel.getTarget(), rel.getLayers(), 
+          featEdge.getArtificialDominancePre(), 
           featEdge.getArtificialDominanceComponent(), allNodes, annoGraph);
 
       }
@@ -279,39 +276,55 @@ public class LegacyGraphConverter
     return annoGraph;
   }
   
-  private static void addRelation(SRelation<? extends SNode, ? extends SNode> rel, long pre, long componentID, 
+  private static void addRelation(SRelation<? extends SNode, ? extends SNode> rel,
+    long pre, long componentID, 
+    Map<SNode, AnnisNode> allNodes, AnnotationGraph annoGraph)
+  {
+    addRelation(rel.getClass(), 
+      rel.getType(),
+      rel.getAnnotations(),
+      rel.getSource(), rel.getTarget(), rel.getLayers(), 
+      pre, componentID, allNodes, annoGraph);
+  }
+  
+  private static void addRelation(
+    Class<? extends SRelation> clazz,
+    String type,
+    Collection<SAnnotation> annotations,
+    SNode source, SNode target,
+    Set<SLayer> relLayers,
+    long pre, long componentID, 
     Map<SNode, AnnisNode> allNodes, AnnotationGraph annoGraph)
   {
     Edge aEdge = new Edge();
     
-    aEdge.setSource(allNodes.get(rel.getSource()));
-    aEdge.setDestination(allNodes.get(rel.getTarget()));
+    aEdge.setSource(allNodes.get(source));
+    aEdge.setDestination(allNodes.get(target));
 
     aEdge.setEdgeType(EdgeType.UNKNOWN);
     aEdge.setPre(pre);
     aEdge.setComponentID(componentID);
 
-    Set<SLayer> relLayers = rel.getLayers();
     if(!relLayers.isEmpty())
     {
        aEdge.setNamespace(relLayers.iterator().next().getName());
     }
-    aEdge.setName(rel.getType());
-   
-    if (rel instanceof SDominanceRelation)
+    aEdge.setName(type);
+    
+    if (SDominanceRelation.class.isAssignableFrom(clazz))
     {
       aEdge.setEdgeType(EdgeType.DOMINANCE);
     }
-    else if (rel instanceof SPointingRelation)
+    else if (SPointingRelation.class.isAssignableFrom(clazz))
     {
       aEdge.setEdgeType(EdgeType.POINTING_RELATION);
     }
-    else if (rel instanceof SSpanningRelation)
+    else if (SSpanningRelation.class.isAssignableFrom(clazz))
     {
       aEdge.setEdgeType(EdgeType.COVERAGE);
     }
 
-    for (SAnnotation sAnno : rel.getAnnotations())
+    for (SAnnotation sAnno : annotations)
     {
       aEdge.addAnnotation(new Annotation(sAnno.getNamespace(), sAnno.getName(),
         sAnno.getValue_STEXT()));
